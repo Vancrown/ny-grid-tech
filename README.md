@@ -1,4 +1,4 @@
-# BoroughWatt — Battery Arbitrage Dashboard
+# BoroughWatt — Battery Dashboard for NYC's Multifamily Buildings
 
 An interactive Dash web application that optimises battery energy storage dispatch against day-ahead electricity prices using a MILP solver (Gurobi / CVXPY).
 

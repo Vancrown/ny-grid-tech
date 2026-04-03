@@ -1,0 +1,201 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@700&family=Nunito:wght@700;800;900&family=Nunito+Sans:wght@400;600;700&display=swap');
+
+/* ===== Dark home page hero ===== */
+
+.bw-home-dark {
+    background: #07111f;
+    color: #ffffff;
+}
+
+.bw-hero-dark {
+    position: relative;
+    min-height: 100vh;
+    background-image:
+        linear-gradient(rgba(7,17,31,0.66), rgba(7,17,31,0.82)),
+        radial-gradient(circle at 50% 58%, rgba(16,201,160,0.10), transparent 28%),
+        url("/assets/nyc-building-hero.png");
+    background-size: cover;
+    background-position: center center;
+    background-repeat: no-repeat;
+    overflow: hidden;
+}
+
+.bw-hero-dark::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+        linear-gradient(180deg, rgba(10,18,35,0.10) 0%, rgba(10,18,35,0.30) 38%, rgba(10,18,35,0.76) 100%);
+    pointer-events: none;
+}
+
+.bw-hero-overlay {
+    position: absolute;
+    inset: 0;
+    background:
+        radial-gradient(circle at 18% 26%, rgba(56,189,248,0.08), transparent 18%),
+        radial-gradient(circle at 77% 18%, rgba(16,201,160,0.07), transparent 18%);
+    pointer-events: none;
+}
+
+.bw-hero-inner {
+    position: relative;
+    z-index: 2;
+    min-height: 100vh;
+    max-width: 1040px;
+    margin: 0 auto;
+    padding: 132px 24px 80px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+}
+
+.bw-hero-kicker {
+    color: #12d2be;
+    font-size: 0.92rem;
+    letter-spacing: 0.34em;
+    text-transform: uppercase;
+    font-weight: 800;
+    margin-bottom: 1.1rem;
+    font-family: 'Nunito Sans', 'DM Sans', sans-serif;
+    text-shadow: 0 0 18px rgba(16,201,160,0.22);
+}
+
+.bw-hero-title {
+    margin: 0;
+    color: #f8fafc;
+    font-family: 'Space Mono', monospace;
+    font-size: clamp(3.2rem, 7vw, 5.5rem);
+    line-height: 1.03;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    text-shadow: 0 10px 30px rgba(0,0,0,0.28);
+}
+
+.bw-hero-accent {
+    color: #10c9a0;
+}
+
+.bw-hero-subtitle {
+    max-width: 760px;
+    margin-top: 1.35rem;
+    color: rgba(255,255,255,0.82);
+    font-size: clamp(1rem, 1.7vw, 1.28rem);
+    line-height: 1.8;
+    font-weight: 600;
+    font-family: 'Nunito Sans', 'DM Sans', sans-serif;
+    text-shadow: 0 8px 24px rgba(0,0,0,0.22);
+}
+
+.bw-hero-tab-row {
+    margin-top: 2.2rem;
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.bw-hero-tab-link {
+    text-decoration: none !important;
+}
+
+.bw-hero-tab {
+    min-width: 255px;
+    max-width: 410px;
+    padding: 15px 20px;
+    border-radius: 14px;
+    border: 1px solid rgba(255,255,255,0.16);
+    backdrop-filter: blur(12px);
+    transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease, box-shadow 0.18s ease;
+    box-shadow: 0 14px 30px rgba(0,0,0,0.22);
+}
+
+.bw-hero-tab:hover {
+    transform: translateY(-2px);
+    border-color: rgba(16,201,160,0.42);
+}
+
+.bw-hero-tab-left {
+    background: rgba(255,255,255,0.08);
+}
+
+.bw-hero-tab-right {
+    background: rgba(16,201,160,0.10);
+}
+
+.bw-hero-tab-title {
+    color: #f8fafc;
+    font-family: 'Space Mono', monospace;
+    font-size: 1rem;
+    font-weight: 700;
+    line-height: 1.25;
+}
+
+.bw-hero-tab-subtitle {
+    margin-top: 4px;
+    color: rgba(255,255,255,0.72);
+    font-size: 0.86rem;
+    font-weight: 700;
+    font-family: 'Nunito Sans', 'DM Sans', sans-serif;
+}
+
+/* floating kW beautification */
+.bw-kw-badge {
+    position: absolute;
+    z-index: 2;
+    padding: 7px 10px;
+    border-radius: 999px;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.76rem;
+    font-weight: 700;
+    backdrop-filter: blur(8px);
+    box-shadow: 0 12px 28px rgba(0,0,0,0.20);
+    animation: bwFloat 4s ease-in-out infinite;
+}
+
+.bw-kw-1, .bw-kw-3, .bw-kw-5 {
+    color: #10c9a0;
+    background: rgba(16,201,160,0.12);
+    border: 1px solid rgba(16,201,160,0.30);
+}
+
+.bw-kw-2, .bw-kw-4 {
+    color: #ff6b6b;
+    background: rgba(255,107,107,0.12);
+    border: 1px solid rgba(255,107,107,0.28);
+}
+
+.bw-kw-1 { top: 18%; left: 17%; animation-delay: 0s; }
+.bw-kw-2 { top: 34%; left: 71%; animation-delay: 0.8s; }
+.bw-kw-3 { top: 24%; left: 63%; animation-delay: 1.2s; }
+.bw-kw-4 { top: 61%; left: 22%; animation-delay: 1.7s; }
+.bw-kw-5 { top: 67%; left: 74%; animation-delay: 0.5s; }
+
+@keyframes bwFloat {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-8px); }
+}
+
+@media (max-width: 768px) {
+    .bw-hero-inner {
+        padding-top: 116px;
+        padding-bottom: 72px;
+    }
+
+    .bw-hero-tab-row {
+        width: 100%;
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .bw-hero-tab {
+        min-width: 0;
+        width: 100%;
+    }
+
+    .bw-kw-badge {
+        display: none;
+    }
+}

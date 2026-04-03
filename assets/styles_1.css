@@ -1,0 +1,28 @@
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+    font-family: 'DM Sans', 'Nunito Sans', sans-serif;
+    background: #0a1223;
+    scroll-behavior: smooth;
+}
+
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-thumb { background: #1e3a5f; border-radius: 3px; }
+
+a { text-decoration: none; }
+
+/* Dash RC slider overrides */
+.rc-slider-rail   { background: #1e3a5f !important; height: 4px !important; }
+.rc-slider-track  { background: #10c9a0 !important; height: 4px !important; }
+.rc-slider-handle {
+    background:   #10c9a0 !important;
+    border:       2px solid #10c9a0 !important;
+    width:        14px !important;
+    height:       14px !important;
+    margin-top:   -5px !important;
+    box-shadow:   0 0 6px #10c9a088 !important;
+}
+.rc-slider-handle:hover,
+.rc-slider-handle:active {
+    box-shadow: 0 0 10px #10c9a0 !important;
+}

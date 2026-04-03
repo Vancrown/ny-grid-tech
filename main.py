@@ -183,7 +183,7 @@ app.layout = dbc.Container(
         dbc.Row(
             dbc.Col(
                 html.H3(
-                    "BoroughWatt - We Empower Your Energy Decisions", className="my-3"
+                    "BorrowWatt - NYC's MultiFamily Energy Solutions", className="my-3"
                 )
             )
         ),

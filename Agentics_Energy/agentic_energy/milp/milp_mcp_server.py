@@ -17,12 +17,19 @@ mcp = FastMCP("MILP")
 
 
 def records_to_arrays(records: List[EnergyDataRecord]) -> Tuple[list, list]:
-    rows = [r for r in records if r.prices is not None and r.consumption is not None]
+    rows = [r for r in records if r.prices is not None]
     rows.sort(key=lambda r: r.timestamps)
-    prices = [float(r.prices) for r in rows]
-    demand = [float(r.consumption) for r in rows]
-    return prices, demand
 
+    prices = [float(r.prices) for r in rows]
+
+    demand = []
+    for r in rows:
+        if getattr(r, "consumption", None) is not None:
+            demand.append(float(r.consumption))
+        else:
+            demand.append(0.0)
+
+    return prices, demand
 
 def solve_daily_milp(
     batt: BatteryParams,
@@ -32,10 +39,12 @@ def solve_daily_milp(
 ) -> SolveResponse:
 
     T = len(day.prices_buy)
-    if len(day.demand_MW) != T:
-        return SolveResponse(
-            status="error", message="prices_buy and demand_MW lengths differ"
-        )
+    if T == 0:
+        raise ValueError("No time periods found in day.prices_buy; cannot solve MILP.")
+    # if len(day.demand_MW) != T:
+    #     return SolveResponse(
+    #         status="error", message="prices_buy and demand_MW lengths differ"
+    #     )
 
     dt = float(day.dt_hours)
     C = float(batt.capacity_MWh)
@@ -45,7 +54,7 @@ def solve_daily_milp(
     soc_tgt = soc0 if batt.soc_target is None else float(batt.soc_target)
 
     p_buy = np.asarray(day.prices_buy, dtype=float)
-    load = np.asarray(day.demand_MW, dtype=float)
+    # load = np.asarray(day.demand_MW, dtype=float)
     if day.allow_export:
         p_sell = np.asarray(
             day.prices_sell if day.prices_sell is not None else day.prices_buy,
@@ -78,7 +87,7 @@ def solve_daily_milp(
             y_c[t] + y_d[t] <= 1,
             soc[t + 1] == soc[t] + (eta_c * c[t] * dt - (d[t] * dt) / eta_d) / C,
         ]
-        net = load[t] + c[t] - d[t]
+        net = c[t] - d[t]
         if day.allow_export:
             cons += [imp[t] - exp[t] == net]
         else:
@@ -113,10 +122,10 @@ def solve_daily_milp(
 
     decision_list = []
     for t in range(T):
-        if y_c.value[t] == 1:
-            decision_list.append(y_c.value[t])
-        elif y_d.value[t] == 1:
-            decision_list.append(-1 * y_d.value[t])
+        if y_c.value[t] is not None and y_c.value[t] > 0.5:
+            decision_list.append(1)
+        elif y_d.value[t] is not None and y_d.value[t] > 0.5:
+            decision_list.append(-1)
         else:
             decision_list.append(0)
 

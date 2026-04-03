@@ -1,21 +1,37 @@
 """
-Energy Data Loader using Agentics Framework
+NYISO Zonal Energy Data Loader using Agentics Framework
 
-This module provides utilities to load and process energy market data from various regions
-(CAISO, ERCOT, Germany, Italy, NewYork) using the Agentics framework for structured data handling.
+This module provides utilities to load and process NYISO market data
+from per-zone CSV files such as CAPITL.csv, CENTRL.csv, DUNWOD.csv, etc.
+
+Important note
+--------------
+To preserve compatibility with the rest of the codebase, we keep the
+variable name `region`, even though it now represents an NYISO zone.
+
+Examples:
+    region = "CAPITL"
+    region = "CENTRL"
+    region = "NYC"
+
+We also preserve the logical distinction between:
+- actual data
+- forecast data
+
+For now, both data_version="actual" and data_version="forecast"
+resolve to the same per-zone CSV file.
 """
 
-import sys
 from pathlib import Path
 from dotenv import load_dotenv, find_dotenv
 
 load_dotenv(find_dotenv())
 
 from agentics import AG
-from pydantic import BaseModel, Field
-from typing import Optional, Dict, List, Union, Tuple, Literal
+from typing import Optional, Dict, Union, Tuple, Literal
 import pandas as pd
-from datetime import datetime
+import numpy as np
+
 from .schemas import (
     EnergyDataRecord,
     MetricStats,
@@ -23,179 +39,147 @@ from .schemas import (
     DateRange,
     BatteryParams,
 )
-import numpy as np
 
 
 class EnergyDataLoader:
     """
-    Energy Data Loader using Agentics framework for structured energy market data loading.
+    Load NYISO zonal data from per-zone CSV files.
 
     Parameters
     ----------
     region : str
-        Region name (CAISO, ERCOT, GERMANY, ITALY, NEWYORK).
+        NYISO zone name stored in the existing `region` variable.
+        Supported values include:
+        CAPITL, CENTRL, DUNWOD, GENESE, H_Q, HUD_VL, LONGIL,
+        MHK_VL, MILLWD, NORTH, NPX, NYC, O_H, PJM, WEST.
     data_dir : Union[str, Path] | None
-        Base directory containing CSV files. Defaults to <this_file>/data.
+        Directory containing the per-zone CSV files.
+        Defaults to <this_file>/data/NYISO_zones.
     data_version : Literal["actual", "forecast"]
-        Whether to load actuals or forecasts. Defaults to "actual".
-    forecast_type : Optional[Literal["LSTM", "NOISE", "RF"]]
-        Required when data_version == "forecast". Ignored for "actual".
+        Logical data source requested by the caller.
+        For now, both "actual" and "forecast" read the same zone CSV.
+    forecast_type : Optional[Literal["LSTM", "NOISE", "RF", "TLLM"]]
+        Forecast label used only as metadata when data_version="forecast".
     """
+
+    VALID_REGIONS = {
+        "CAPITL",
+        "CENTRL",
+        "DUNWOD",
+        "GENESE",
+        "H_Q",
+        "HUD_VL",
+        "LONGIL",
+        "MHK_VL",
+        "MILLWD",
+        "NORTH",
+        "NPX",
+        "NYC",
+        "O_H",
+        "PJM",
+        "WEST",
+    }
+
+    VALID_FORECAST_TYPES = {"LSTM", "NOISE", "RF", "TLLM"}
 
     def __init__(
         self,
         region: str,
-        data_dir: Union[str, Path] = None,
+        data_dir: Union[str, Path, None] = None,
         data_version: Literal["actual", "forecast"] = "actual",
-        forecast_type: Optional[Literal["LSTM", "NOISE", "RF"]] = None,
+        forecast_type: Optional[Literal["LSTM", "NOISE", "RF", "TLLM"]] = None,
     ):
         """
-        Initialize the data loader
+        Initialize the loader for one NYISO zone, stored in the `region` field.
 
         Args:
-            region: Region name (CAISO, ERCOT, GERMANY, ITALY, NEWYORK)
-            data_dir: Path to the directory containing CSV files
+            region: NYISO zone name, used as the existing `region` variable.
+            data_dir: Directory containing the per-zone CSV files.
+            data_version: Logical source kind ("actual" or "forecast").
+            forecast_type: Forecast label when data_version="forecast".
         """
         if data_dir is None:
-            # Default to current directory's data folder
-            self.data_dir = Path(__file__).parent / "data"
+            self.data_dir = Path(__file__).parent / "data" / "NYISO_zones"
         else:
             self.data_dir = Path(data_dir)
 
+        # Kept as `region` for compatibility, but values are NYISO zones.
         self.region = region.upper()
         self.data_version = data_version.lower()
         self.forecast_type = (
             forecast_type.upper() if forecast_type is not None else None
         )
 
-        # --- Supported base files for ACTUALS ---
-        self.available_actuals: Dict[str, str] = {
-            "CAISO": "CAISO_data.csv",
-            "ERCOT": "Ercot_energy_data.csv",
-            "GERMANY": "Germany_energy_Data.csv",
-            "ITALY": "Italy_data_actual.csv",
-            "ITALY_TEST": "Italy_data.csv",
-            "NEWYORK": "NewYork_energy_data.csv",
-        }
-
-        # --- Supported forecast files by region ---
-        # You mentioned only Italy variants; we can extend this dict later for other regions.
-        self.available_forecasts: Dict[str, Dict[str, str]] = {
-            "ITALY": {
-                "LSTM": "Italy_data_forecast_LSTM.csv",
-                "NOISE": "Italy_data_forecast_NOISE.csv",
-                "RF": "Italy_data_forecast_RF.csv",
-                "TLLM": "Italy_data_forecast_TLLM.csv",
-            },
-            # Add other regions here if/when forecasts exist.
-            # e.g., "CAISO": {"LSTM": "...", "NOISE": "...", "RF": "..."}
-            "NEWYORK": {
-                "LSTM": "NewYork_data_forecast_LSTM.csv",
-                "NOISE": "NewYork_data_forecast_NOISE.csv",
-                "RF": "NewYork_data_forecast_RF.csv",
-            },
-            "CAISO": {
-                "LSTM": "CAISO_data_forecast_LSTM.csv",
-                "NOISE": "CAISO_data_forecast_NOISE.csv",
-                "RF": "CAISO_data_forecast_RF.csv",
-            },
-            "ERCOT": {
-                "LSTM": "Ercot_data_forecast_LSTM.csv",
-                "NOISE": "Ercot_data_forecast_NOISE.csv",
-                "RF": "Ercot_data_forecast_RF.csv",
-            },
-            "GERMANY": {
-                "LSTM": "Germany_data_forecast_LSTM.csv",
-                "NOISE": "Germany_data_forecast_NOISE.csv",
-                "RF": "Germany_data_forecast_RF.csv",
-            },
-        }
-
         self.data: Optional[AG] = None
 
-        # --- Validate upfront to catch config issues early ---
+        # Validate inputs early so configuration errors fail fast.
         self._validate_init()
 
     def _validate_init(self):
-        # Region support
-        known_regions = set(self.available_actuals.keys()) | set(
-            self.available_forecasts.keys()
-        )
-        if self.region not in known_regions:
+        """Validate NYISO zone name, data version, and forecast settings."""
+        if self.region not in self.VALID_REGIONS:
             raise ValueError(
-                f"Region '{self.region}' not supported. Available: {sorted(known_regions)}"
+                f"Region '{self.region}' not supported. "
+                f"Available NYISO zones: {sorted(self.VALID_REGIONS)}"
             )
 
         if self.data_version not in {"actual", "forecast"}:
             raise ValueError("data_version must be either 'actual' or 'forecast'.")
 
         if self.data_version == "forecast":
-            # Region must have forecast mapping
-            if self.region not in self.available_forecasts:
-                raise ValueError(
-                    f"Forecasts are not configured for region '{self.region}'. "
-                    f"Available forecast regions: {sorted(self.available_forecasts.keys())}"
-                )
-            # forecast_type must be provided & valid
             if not self.forecast_type:
                 raise ValueError(
-                    "forecast_type is required when data_version='forecast' "
-                    "(choose one of: 'LSTM', 'NOISE', 'RF')."
+                    "forecast_type is required when data_version='forecast'."
                 )
-            valid_types = set(self.available_forecasts[self.region].keys())
-            if self.forecast_type not in valid_types:
+            if self.forecast_type not in self.VALID_FORECAST_TYPES:
                 raise ValueError(
-                    f"Unsupported forecast_type '{self.forecast_type}' for region '{self.region}'. "
-                    f"Supported: {sorted(valid_types)}"
+                    f"Unsupported forecast_type '{self.forecast_type}'. "
+                    f"Supported: {sorted(self.VALID_FORECAST_TYPES)}"
                 )
 
     def _resolve_filename(self) -> Path:
-        """Return the Path to the CSV file based on data_version/forecast_type."""
-        if self.data_version == "actual":
-            fname = self.available_actuals.get(self.region)
-            if not fname:
-                # Defensive: shouldn't happen because of _validate_init.
-                raise ValueError(
-                    f"No actuals file registered for region '{self.region}'."
-                )
-            return self.data_dir / fname
+        """
+        Resolve the CSV path for the selected NYISO zone.
 
-        # Forecast case
-        region_map = self.available_forecasts.get(self.region, {})
-        fname = region_map.get(self.forecast_type or "")
-        if not fname:
-            raise ValueError(
-                f"No forecast file for region '{self.region}' and type '{self.forecast_type}'."
-            )
-        return self.data_dir / fname
+        Current behavior
+        ----------------
+        Both actual and forecast requests point to the same per-zone CSV file.
 
-    # ----------------------------
-    # Public API
-    # ----------------------------
+        Example:
+            region='CAPITL' -> <data_dir>/CAPITL.csv
+        """
+        return self.data_dir / f"{self.region}.csv"
+
     def load_region_data(self) -> AG:
         """
-        Load data for the configured region/data_version/forecast_type using Agentics.
+        Load the selected NYISO zonal CSV using Agentics.
+
+        Returns
+        -------
+        AG
+            Agentics object containing EnergyDataRecord states.
 
         Raises
         ------
         FileNotFoundError
-            If the resolved CSV does not exist.
-        ValueError
-            If the configuration is invalid.
+            If the zone CSV does not exist.
         """
         file_path = self._resolve_filename()
         if not file_path.exists():
-            raise FileNotFoundError(f"Data file not found: {file_path}")
+            raise FileNotFoundError(f"Region data file not found: {file_path}")
 
         energy_data = AG.from_csv(file_path, atype=EnergyDataRecord)
 
-        # Stamp region on each record
+        # Stamp provenance onto each record.
         for state in energy_data.states:
-            state.region = self.region
-            # Optional: annotate provenance
-            if getattr(state, "source_kind", None) is not None:
+            # Keep using `region` for compatibility; value is the NYISO zone.
+            if hasattr(state, "region"):
+                state.region = self.region
+
+            if hasattr(state, "source_kind"):
                 state.source_kind = self.data_version
-            if getattr(state, "forecast_type", None) is not None:
+
+            if hasattr(state, "forecast_type"):
                 state.forecast_type = (
                     self.forecast_type if self.data_version == "forecast" else None
                 )
@@ -210,10 +194,18 @@ class EnergyDataLoader:
         price_range: Optional[Tuple[float, float]] = None,
     ) -> AG:
         """
-        Efficiently filter region data using vectorized masking inside areduce.
-        Assumes each state has attributes: timestamps, prices.
-        """
+        Filter loaded NYISO zonal data by date range and/or price range.
 
+        Notes
+        -----
+        This assumes each state has:
+        - timestamps
+        - prices
+
+        If your CSV/schema uses `lmp` instead of `prices`, either:
+        1. rename the CSV column to `prices`, or
+        2. map `lmp -> prices` in the schema.
+        """
         has_date_filter = bool(start_date or end_date)
         start_day = (
             np.datetime64(pd.to_datetime(start_date).date()) if start_date else None
@@ -227,21 +219,25 @@ class EnergyDataLoader:
         async def _filter_reduce(states: list):
             if not states:
                 return []
+
             ts_arr = np.array([s.timestamps for s in states], dtype="datetime64[ns]")
             day_arr = ts_arr.astype("datetime64[D]")
 
             pr_arr = None
             if has_price_filter:
                 pr_arr = pd.to_numeric(
-                    [getattr(s, "prices", np.nan) for s in states], errors="coerce"
+                    [getattr(s, "prices", np.nan) for s in states],
+                    errors="coerce",
                 ).to_numpy()
 
             mask = np.ones(len(states), dtype=bool)
+
             if has_date_filter:
                 if start_day is not None:
                     mask &= day_arr >= start_day
                 if end_day is not None:
                     mask &= day_arr <= end_day
+
             if has_price_filter:
                 mask &= np.isfinite(pr_arr)
                 mask &= (pr_arr >= min_price) & (pr_arr <= max_price)
@@ -250,6 +246,7 @@ class EnergyDataLoader:
                 return states
             if not mask.any():
                 return []
+
             idx = np.nonzero(mask)[0]
             return [states[i] for i in idx]
 
@@ -263,8 +260,15 @@ class EnergyDataLoader:
     async def get_summary_stats_from_ag(
         ag_data: AG, column: Optional[str] = None
     ) -> SummaryStats | Dict:
+        """
+        Compute summary statistics for loaded NYISO zonal data.
+
+        The returned SummaryStats object continues to use the `region` field,
+        but that field now contains the NYISO zone name.
+        """
         prices = np.array(
-            [s.prices for s in ag_data.states if s.prices is not None], dtype=float
+            [s.prices for s in ag_data.states if s.prices is not None],
+            dtype=float,
         )
         consumption = np.array(
             [s.consumption for s in ag_data.states if s.consumption is not None],
@@ -277,6 +281,7 @@ class EnergyDataLoader:
         async def summarize(arr: np.ndarray) -> MetricStats:
             if arr.size == 0:
                 return MetricStats()
+
             return MetricStats(
                 count=int(arr.size),
                 min=float(np.min(arr)),
@@ -310,7 +315,10 @@ class EnergyDataLoader:
 
 class BatteryDataLoader:
     """
-    Battery Data Loader — computes battery parameters from load statistics.
+    Battery parameter helper based on load summary statistics.
+
+    This class is unchanged conceptually: it computes battery sizing from
+    load statistics such as p25 and p75.
     """
 
     def __init__(
@@ -326,11 +334,12 @@ class BatteryDataLoader:
     ):
         """
         Args:
-            load_stats (dict): Must contain 'p25' and 'p75' in MW.
-            duration_hours (float): Hours battery should sustain IQR deviation.
+            load_stats: Must include 'p25' and 'p75' values in MW.
+            duration_hours: Battery duration in hours.
         """
         if "p25" not in load_stats or "p75" not in load_stats:
             raise ValueError("load_stats must include 'p25' and 'p75' values in MW.")
+
         self.load_stats = load_stats
         self.duration_hours = duration_hours
         self.soc_init = soc_init
@@ -342,12 +351,11 @@ class BatteryDataLoader:
 
     def compute_battery_params(self) -> BatteryParams:
         """
-        Compute capacity and charge/discharge limits from IQR of load statistics.
-        Converts MW → MW and MWh → MWh internally.
+        Compute battery capacity and charge/discharge limits from
+        the interquartile range of load statistics.
         """
         p25, p75 = self.load_stats["p25"], self.load_stats["p75"]
 
-        # Interquartile load deviation
         iqr_range_MW = p75 - p25
         capacity_MWh = iqr_range_MW * self.duration_hours
         cmax_MW = capacity_MWh / self.duration_hours
@@ -366,7 +374,7 @@ class BatteryDataLoader:
         )
 
     def summary(self) -> Dict[str, float]:
-        """Return computed specs as readable summary."""
+        """Return the computed battery specification summary."""
         params = self.compute_battery_params()
         return {
             "Capacity (MWh)": params.capacity_MWh,
@@ -375,35 +383,3 @@ class BatteryDataLoader:
             "Efficiency (Charge/Discharge)": (params.eta_c, params.eta_d),
             "Duration (hours)": self.duration_hours,
         }
-
-    # async def get_summary_stats_from_ag(ag_data: AG, column: Optional[str] = None) -> SummaryStats | Dict:
-    #     """
-    #     Compute summary statistics (min, max, avg, median, percentiles, std, var)
-    #     and return as Pydantic schema (SummaryStats).
-    #     """
-
-    #     # source = AG(
-    #     #     atype = EnergyDataRecord,
-    #     #     verbose_agent = True
-    #     #     state = ag_data.states
-    #     # )
-    #     if column:
-    #         answer = await(
-    #             AG(
-    #                 atype = SummaryStats,
-    #                 verbose_agent = True,
-    #                 instructions = f"Compute summary statistics for the '{column}' column only. "
-    #             )
-    #             << ag_data(column)
-    #         )
-    #         return answer
-    #     else:
-    #         answer = await(
-    #             AG(
-    #                 atype = SummaryStats,
-    #                 verbose_agent = True,
-    #                 instructions = "Compute summary statistics for all relevant columns."
-    #             )
-    #             << ag_data
-    #         )
-    #         return answer

@@ -15,10 +15,26 @@ from agentic_energy.milp import milp_mcp_server
 from agentic_energy.data_utils import run_forecast_step
 import vis_adj
 
-REGIONS = ["ITALY"]
+REGIONS = [
+    "CAPITL", 
+    "CENTRL", 
+    "DUNWOD",
+    "GENESE",
+    "H_Q",     # PROXY ZONE
+    "HUD_VL",
+    "LONGIL",
+    "MHK_VL",
+    "MILLWD",
+    "NORTH",
+    "NPX",    # PROXY ZONE
+    "NYC",
+    "O_H",    # PROXY ZONE
+    "PJM",    # PROXY ZONE
+    "WEST",
+]
 FORECAST_TYPES = ["LSTM", "RF"]
-DATE_MIN = "2018-01-01"
-DATE_MAX = "2019-12-31"
+DATE_MIN = "2025-01-01"
+DATE_MAX = "2025-12-31"
 
 app = dash.Dash(
     __name__,
@@ -107,7 +123,7 @@ sidebar = dbc.Card(
         dcc.Dropdown(
             id="region",
             options=[{"label": r, "value": r} for r in REGIONS],
-            value="ITALY",
+            value="CAPITL",
             clearable=False,
             className="mb-2",
         ),
@@ -123,7 +139,7 @@ sidebar = dbc.Card(
         dbc.Input(
             id="date_str",
             type="date",
-            value="2018-01-01",
+            value="2025-01-01",
             min=DATE_MIN,
             max=DATE_MAX,
             className="mb-2",
@@ -232,6 +248,7 @@ def sync_interval(is_playing, date_str):
     State("forecast_type", "value"),
     prevent_initial_call=True,
 )
+
 def run_optimization(
     n_clicks,
     n_intervals,

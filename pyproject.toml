@@ -5,12 +5,22 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
+    "agentics-py>=0.3.5",
+    "crewai-tools>=1.6.1",
+    "cvxpy>=1.7.5",
+    "dash>=4.1.0",
+    "dash-bootstrap-components>=2.0.4",
     "dotenv>=0.9.9",
     "gridstatusio>=0.15.1",
+    "gurobipy>=13.0.1",
     "matplotlib>=3.10.8",
+    "mcp>=1.27.0",
+    "numpy>=1.26.4",
     "pip>=26.0.1",
     "plotly>=6.6.0",
     "polars>=1.39.3",
     "pyarrow>=23.0.1",
+    "pydantic>=2.12.5",
+    "scipy>=1.17.1",
     "seaborn>=0.13.2",
 ]

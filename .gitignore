@@ -1,5 +1,5 @@
 # Python-generated files
-__pycache__/
+__pycache__
 *.py[oc]
 build/
 dist/
@@ -11,9 +11,33 @@ wheels/
 archive
 .env
 
+# config
+.github
+.vscode
+
 # macOS files
 .DS_Store
 
 # private docs
 paper
 requires
+Agentics_Energy/*
+
+# unused helper scripts
+src/refactor.py
+src/utils.py
+
+# plots
+plot/
+
+# keep dependency
+!Agentics_Energy/agentic_energy/
+Agentics_Energy/agentic_energy/*
+!Agentics_Energy/agentic_energy/schemas.py
+!Agentics_Energy/agentic_energy/data_utils.py
+!Agentics_Energy/agentic_energy/data_loader.py
+!Agentics_Energy/agentic_energy/mcp_clients.py
+
+!Agentics_Energy/agentic_energy/milp/
+Agentics_Energy/agentic_energy/milp/*
+!Agentics_Energy/agentic_energy/milp/milp_mcp_server.py

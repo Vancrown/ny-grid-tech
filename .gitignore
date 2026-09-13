@@ -33,6 +33,9 @@ app_orig.py
 plot/
 plots/
 
+# generated static site
+_site/
+
 # keep dependency
 !Agentics_Energy/agentic_energy/
 Agentics_Energy/agentic_energy/*

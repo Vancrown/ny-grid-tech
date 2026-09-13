@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Pyodide feasibility probe</title>
+<style>
+  body { background:#0a1223; color:#e2e8f0; font:13px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace; padding:24px; }
+  h1 { font-size:16px; color:#10c9a0; }
+  #log div { padding:2px 0; border-bottom:1px solid #1e3a5f44; white-space:pre-wrap; }
+  .ok { color:#2dcb7f; } .err { color:#ff6b6b; } .info { color:#9ca3af; }
+  #status { font-size:14px; margin:12px 0; }
+</style>
+</head>
+<body>
+<h1>Pyodide feasibility probe</h1>
+<div id="status" class="info">starting…</div>
+<div id="log"></div>
+
+<script type="module">
+const logEl = document.getElementById('log');
+const statusEl = document.getElementById('status');
+const t0 = performance.now();
+
+const log = (msg, cls = '') => {
+  const d = document.createElement('div');
+  d.className = cls;
+  d.textContent = `[${String(Math.round(performance.now() - t0)).padStart(6)}ms] ${msg}`;
+  logEl.appendChild(d);
+};
+const setStatus = (t, cls = 'info') => { statusEl.textContent = t; statusEl.className = cls; };
+
+async function step(label, fn) {
+  log(`▶ ${label}`, 'info');
+  try {
+    const r = await fn();
+    log(`✅ ${label}${r ? ' → ' + r : ''}`, 'ok');
+    return r;
+  } catch (e) {
+    log(`❌ ${label} → ${e.message || e}`, 'err');
+    throw e;
+  }
+}
+
+try {
+  const { loadPyodide } = await import('https://cdn.jsdelivr.net/pyodide/v314.0.6/full/pyodide.mjs');
+  let py;
+  await step('load pyodide', async () => {
+    py = await loadPyodide({ indexURL: 'https://cdn.jsdelivr.net/pyodide/v314.0.6/full/' });
+    py.setStdout({ batched: (s) => log(s, 'info') });
+    py.setStderr({ batched: (s) => log(s, 'err') });
+    return 'python ' + py.runPython('import sys; sys.version.split()[0]');
+  });
+  window.__py = py;
+
+  await step('loadPackage micropip', () => py.loadPackage('micropip'));
+
+  await step('install dash + cvxpy-base + plotly', () => py.runPythonAsync(`
+import micropip
+await micropip.install(['dash', 'cvxpy-base', 'plotly', 'pandas'])
+'micropip-ok'
+`));
+
+  await step('import heavy deps', () => py.runPython(`
+import dash, flask, werkzeug, plotly, cvxpy, pandas, numpy, scipy, pydantic
+print('dash', dash.__version__, '| flask', flask.__version__, '| cvxpy', cvxpy.__version__)
+print('solvers:', cvxpy.installed_solvers())
+`));
+
+  await step('tiny Dash app + Flask test_client', () => py.runPython(`
+from dash import Dash, html, dcc, Input, Output, State, ctx
+app = Dash(__name__, suppress_callback_exceptions=True, url_base_pathname=None)
+app.layout = html.Div([
+    html.Button("go", id="btn", n_clicks=0),
+    html.Div("page-a", id="page-a"),
+    html.Div("page-b", id="page-b", style={"display": "none"}),
+    dcc.Store(id="tab", data="a"),
+])
+
+@app.callback(Output("page-a", "style"), Output("page-b", "style"), Output("tab", "data"),
+              Input("btn", "n_clicks"), State("tab", "data"), prevent_initial_call=True)
+def switch(n, tab):
+    nxt = "b" if tab == "a" else "a"
+    return ({"display": "none"} if nxt == "b" else {},
+            {} if nxt == "b" else {"display": "none"}, nxt)
+
+c = app.server.test_client()
+lay = c.get("/_dash-layout")
+dep = c.get("/_dash-dependencies")
+print("GET /_dash-layout       ", lay.status_code, len(lay.data), "bytes")
+print("GET /_dash-dependencies ", dep.status_code, len(dep.data), "bytes")
+import json
+d = json.loads(dep.data)[0]
+outs = [p.split(".", 1) for p in d["output"][2:-2].split("...")]
+body = {"output": d["output"],
+        "outputs": [{"id": i, "property": p} for i, p in outs],
+        "inputs": [{"id": i["id"], "property": i["property"],
+                    "value": 1 if i["id"] == "btn" else None} for i in d["inputs"]],
+        "state": [{"id": s["id"], "property": s["property"],
+                   "value": "a"} for s in d.get("state", [])],
+        "changedPropIds": ["btn.n_clicks"]}
+r = c.post("/_dash-update-component", json=body)
+print("POST /_dash-update-component", r.status_code)
+print("   response:", json.dumps(r.get_json()))
+idx = c.get("/")
+print("GET /          ", idx.status_code, len(idx.data), "bytes")
+print("GET /_dash-config", c.get("/_dash-config").status_code)
+print("PROBE-OK")
+`));
+
+  setStatus('✅ ALL PROBE CHECKS PASSED', 'ok');
+} catch (e) {
+  setStatus('❌ PROBE FAILED: ' + (e.message || e), 'err');
+  log(String(e.stack || e), 'err');
+}
+</script>
+</body>
+</html>

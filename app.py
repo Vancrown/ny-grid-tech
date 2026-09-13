@@ -1,4 +1,5 @@
 import sys
+import os
 
 sys.path.append("./Agentics_Energy")
 sys.path.append("./Agentics_Energy/agentic_energy")
@@ -10,6 +11,7 @@ import dash
 from dash import dcc, html, Input, Output, State, ctx
 import dash_bootstrap_components as dbc
 from datetime import datetime, timedelta
+from dash import dcc, html, Input, Output, State, callback, no_update, ctx
 
 from agentic_energy.schemas import BatteryParams, DayInputs, SolveRequest
 from agentic_energy.milp import milp_mcp_server
@@ -2082,6 +2084,7 @@ app = dash.Dash(
     meta_tags=[{"name": "viewport", "content": "width=device-width,initial-scale=1"}],
     title="Borrow Watts — NYC Energy",
 )
+server = app.server  # exposes the Flask server for gunicorn
 server = app.server
 
 app.layout = html.Div(
@@ -2320,9 +2323,14 @@ def run_optimization(
     solve_response = milp_mcp_server.solve_daily_milp(
         batt=battery_params,
         day=day_inputs,
-        solver="GUROBI",
+        solver=os.environ.get("MILP_SOLVER", "CPLEX"),
         solver_opts=None,
     )
+    print("STATUS:", solve_response.status, "MESSAGE:", solve_response.message)
+
+    if solve_response.status != "optimal" or solve_response.soc is None:
+        status = f"Solve failed ({solve_response.status}): {solve_response.message or 'no schedule returned'}"
+        return no_update, no_update, no_update, status, date_str, no_update, no_update
 
     fig_forecast = vis_adj.plot_price_forecast_fig(
         prices=day_inputs.prices_buy,
@@ -2361,4 +2369,8 @@ def run_optimization(
 
 
 if __name__ == "__main__":
-    app.run(debug=True, port=8051)
+    app.run(
+        debug=os.environ.get("DASH_DEBUG", "false").lower() == "true",
+        host="0.0.0.0",
+        port=int(os.environ.get("PORT", 8051)),
+    )

@@ -101,7 +101,7 @@ def solve_daily_milp(
     prob = cp.Problem(cp.Minimize(objective), cons)
 
     if solver is None:
-        for cand in ["GUROBI", "CPLEX", "SCIPY", "CBC", "GLPK_MI", "ECOS_BB"]:
+        for cand in ["CPLEX", "SCIPY", "CBC", "GLPK_MI", "ECOS_BB"]:
             if cand in cp.installed_solvers():
                 solver = cand
                 break
@@ -109,13 +109,10 @@ def solve_daily_milp(
     if solver_opts is None:
         solver_opts = {}
     else:
-        solver_opts = dict(solver_opts)  # ensure it's a dict
+        solver_opts = dict(solver_opts)
 
     try:
-        if solver:
-            prob.solve(solver=cp.GUROBI, **solver_opts)
-        else:
-            prob.solve(**solver_opts)  # may fail if default solver isn't MILP-capable
+        prob.solve(solver=solver, **solver_opts)   # <-- use the actual `solver` variable, not hardcoded GUROBI
     except Exception as e:
         return SolveResponse(status="error", message=str(e))
     # can you write the decision list as well here in a simple for loop no need to do comprehension

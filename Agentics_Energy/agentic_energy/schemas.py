@@ -98,10 +98,7 @@ class SolveFromRecordsRequest(BaseModel):
 class SolveResponse(BaseModel):
     status: str
     message: Optional[str] = None
-    objective_cost: float = Field(
-        ...,
-        description="total objective cost i.e. sum of (price_sell times grid_export subtracted from price_buy times grid_import) multiplied by the sample time of operation dt_hours across all timestamps",
-    )
+    objective_cost: Optional[float] = None
     charge_MW: Optional[List[float]] = Field(
         None, description="Battery charge schedule in MW"
     )

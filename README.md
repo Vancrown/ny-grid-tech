@@ -11,12 +11,12 @@ An interactive Dash web application that optimises battery energy storage dispat
 source .venv/bin/activate   # or: uv venv && uv sync
 
 # 2. launch the dashboard
-python main.py
+python app.py
 ```
 
-Open <http://127.0.0.1:8050> in your browser.
+Open <http://127.0.0.1:8051> in your browser.
 
-> The app binds to port **8050** and runs in debug mode by default.
+> The app binds to port **8051** and runs in debug mode by default.
 
 ---
 

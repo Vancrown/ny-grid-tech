@@ -12,7 +12,7 @@ archive
 .env
 
 # config
-.github
+.github/copilot-instructions.md
 .vscode
 
 # macOS files
@@ -29,8 +29,9 @@ src/utils.py
 src/how.py
 app_orig.py
 
-# plots
+# generated plots
 plot/
+plots/
 
 # keep dependency
 !Agentics_Energy/agentic_energy/
@@ -44,3 +45,12 @@ Agentics_Energy/agentic_energy/*
 !Agentics_Energy/agentic_energy/milp/
 Agentics_Energy/agentic_energy/milp/*
 !Agentics_Energy/agentic_energy/milp/milp_mcp_server.py
+
+# presentation deck
+deck
+
+# data
+output_files/
+/data/
+Agentics_Energy/agentic_energy/data/NewYork_energy_data.csv
+

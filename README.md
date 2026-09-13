@@ -47,7 +47,6 @@ Source: GitHub Actions**. See [`static/README.md`](static/README.md) for how the
 in-browser runtime works and what its limits are (the first load downloads
 ~25 MB of Python runtime).
 
-
 ---
 
 ## Dashboard Overview

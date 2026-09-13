@@ -42,27 +42,27 @@ in CI and publishes it.
 
 ## What the build produces
 
-| Path | Contents |
-| --- | --- |
-| `index.html`, `boot.js` | browser shell: progress UI + the bridge |
-| `py/` | the app's Python, byte-identical to the repo |
-| `py/shims/` | stand-ins for modules with no browser equivalent |
-| `py/manifest.json` | what `boot.js` must load |
-| `runtime.json` | Pyodide URL and the exact package pins |
-| `_dash-component-suites/` | Dash's JS, extracted from the installed wheels |
-| `data/NYISO_zones/` | the 15 zone CSVs the optimiser reads |
-| `assets/` | `styles.css`, `nyc_building.jpeg` |
+| Path                      | Contents                                         |
+| ------------------------- | ------------------------------------------------ |
+| `index.html`, `boot.js`   | browser shell: progress UI + the bridge          |
+| `py/`                     | the app's Python, byte-identical to the repo     |
+| `py/shims/`               | stand-ins for modules with no browser equivalent |
+| `py/manifest.json`        | what `boot.js` must load                         |
+| `runtime.json`            | Pyodide URL and the exact package pins           |
+| `_dash-component-suites/` | Dash's JS, extracted from the installed wheels   |
+| `data/NYISO_zones/`       | the 15 zone CSVs the optimiser reads             |
+| `assets/`                 | `styles.css`, `nyc_building.jpeg`                |
 
 ## Shims
 
 Four imports have no browser equivalent. Each one is a stand-in that covers
 only the surface the app touches at import time.
 
-| Module | Why |
-| --- | --- |
-| `agentics` | `data_loader` loads CSVs through `AG.from_csv`; the shim does it with `csv` |
-| `dotenv` | `data_loader` calls `load_dotenv(find_dotenv())`; a static site has no `.env` |
-| `mcp` | `milp_mcp_server` builds a `FastMCP` server it never runs here |
+| Module         | Why                                                                            |
+| -------------- | ------------------------------------------------------------------------------ |
+| `agentics`     | `data_loader` loads CSVs through `AG.from_csv`; the shim does it with `csv`    |
+| `dotenv`       | `data_loader` calls `load_dotenv(find_dotenv())`; a static site has no `.env`  |
+| `mcp`          | `milp_mcp_server` builds a `FastMCP` server it never runs here                 |
 | `crewai_tools` | `mcp_clients` imports `MCPServerAdapter`; the app never opens an MCP transport |
 
 ## Browser-specific adaptations

@@ -31,7 +31,9 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 
 STATIC_SOURCES = REPO_ROOT / "static"
 ASSET_SOURCES = REPO_ROOT / "assets"
-ZONE_DATA_SOURCES = REPO_ROOT / "Agentics_Energy" / "agentic_energy" / "data" / "NYISO_zones"
+ZONE_DATA_SOURCES = (
+    REPO_ROOT / "Agentics_Energy" / "agentic_energy" / "data" / "NYISO_zones"
+)
 
 # Imported so the component suites can be enumerated from the app that is
 # actually being deployed.
@@ -95,8 +97,7 @@ def copy_python_payload(site_dir: Path) -> list[str]:
     shutil.copy2(STATIC_SOURCES / "boot_app.py", py_dir / "boot_app.py")
 
     shim_files = sorted(
-        path.relative_to(py_dir).as_posix()
-        for path in (py_dir / "shims").rglob("*.py")
+        path.relative_to(py_dir).as_posix() for path in (py_dir / "shims").rglob("*.py")
     )
     return list(APP_SOURCE_FILES) + shim_files
 
@@ -112,7 +113,9 @@ def copy_zone_data(site_dir: Path) -> list[str]:
 
 def copy_assets(site_dir: Path) -> list[str]:
     shutil.copytree(ASSET_SOURCES, site_dir / "assets", dirs_exist_ok=True)
-    return sorted(path.name for path in (site_dir / "assets").iterdir() if path.is_file())
+    return sorted(
+        path.name for path in (site_dir / "assets").iterdir() if path.is_file()
+    )
 
 
 def suite_urls(dash_app) -> list[str]:
@@ -217,7 +220,9 @@ def build(site_dir: Path) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--out", default="_site", help="output directory (default: _site)")
+    parser.add_argument(
+        "--out", default="_site", help="output directory (default: _site)"
+    )
     arguments = parser.parse_args()
     build((REPO_ROOT / arguments.out).resolve())
 

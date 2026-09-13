@@ -22,7 +22,12 @@ class AG:
     def from_csv(cls, path, atype=None, **kwargs):
         with open(path, newline="", encoding="utf-8") as handle:
             rows = [
-                atype(**{key: (value if value != "" else None) for key, value in row.items()})
+                atype(
+                    **{
+                        key: (value if value != "" else None)
+                        for key, value in row.items()
+                    }
+                )
                 for row in csv.DictReader(handle)
             ]
         return cls(atype=atype, states=rows)

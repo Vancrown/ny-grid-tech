@@ -20,6 +20,36 @@ Open <http://127.0.0.1:8051> in your browser.
 
 ---
 
+## Deploy to GitHub Pages
+
+The same app also runs as a **static site**, with no server: the Python is
+executed by [Pyodide](https://pyodide.org) inside the visitor's browser, and
+`app.py` is shipped unmodified.
+
+```bash
+# 1. build the static site into _site/
+uv run python tools/export_static.py
+
+# 2. preview it
+python3 -m http.server 3000 --directory _site
+```
+
+Open <http://localhost:3000/>. `_site/` is generated and git-ignored.
+
+> The build imports `app.py` to enumerate the Dash component suites out of the
+> installed wheels, so it has to run with the project environment (`uv run`) —
+> the system `python3` will fail on `import numpy`. Serving the result needs no
+> dependencies.
+
+Pushing to `main` builds and publishes it via
+`.github/workflows/pages.yml`. Enable it once under **Settings → Pages →
+Source: GitHub Actions**. See [`static/README.md`](static/README.md) for how the
+in-browser runtime works and what its limits are (the first load downloads
+~25 MB of Python runtime).
+
+
+---
+
 ## Dashboard Overview
 
 The UI is divided into a **left sidebar** (inputs) and a **right panel** (three plots).  

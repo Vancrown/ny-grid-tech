@@ -1,0 +1,54 @@
+name: Deploy static site to GitHub Pages
+
+# Builds the browser-runnable copy of the Dash app and publishes it to Pages.
+# The app's Python is executed by Pyodide in the visitor's browser, so the
+# published site is plain static files with no server component.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Install project dependencies
+        # The component suites are extracted from whatever dash version is
+        # installed here, and the same versions are written into the build's
+        # runtime.json, so the browser runtime always matches the shipped JS.
+        run: uv sync --locked
+
+      - name: Build static site
+        run: uv run python tools/export_static.py --out _site
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
